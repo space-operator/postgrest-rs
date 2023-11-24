@@ -2,21 +2,80 @@ use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client, Error, Method, Response,
 };
+use serde::{Deserialize, Serialize};
+
+pub mod headers_serde {
+    use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+    use serde::{
+        de::{Deserialize, Error},
+        ser::SerializeSeq,
+    };
+
+    pub fn serialize<S: serde::Serializer>(map: &HeaderMap, s: S) -> Result<S::Ok, S::Error> {
+        struct Bytes<'a>(&'a [u8]);
+
+        impl<'a> serde::Serialize for Bytes<'a> {
+            fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                s.serialize_bytes(self.0)
+            }
+        }
+
+        let mut seq = s.serialize_seq(Some(map.len()))?;
+        for (k, v) in map.iter() {
+            match v.to_str() {
+                Ok(s) => seq.serialize_element(&(k.as_str(), s))?,
+                Err(_) => seq.serialize_element(&(k.as_str(), &Bytes(v.as_bytes())))?,
+            }
+        }
+        seq.end()
+    }
+
+    pub fn deserialize<'de, D: serde::Deserializer<'de>>(d: D) -> Result<HeaderMap, D::Error> {
+        let raw = Vec::<(bytes::Bytes, bytes::Bytes)>::deserialize(d)?;
+        raw.into_iter()
+            .map(|(k, v)| {
+                Ok((
+                    HeaderName::from_bytes(&k).map_err(D::Error::custom)?,
+                    HeaderValue::from_maybe_shared(v).map_err(D::Error::custom)?,
+                ))
+            })
+            .collect()
+    }
+}
+
+pub mod method_serde {
+    use reqwest::Method;
+    use serde::de::{Deserialize, Error};
+
+    pub fn serialize<S: serde::Serializer>(method: &Method, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(method.as_str())
+    }
+
+    pub fn deserialize<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Method, D::Error> {
+        String::deserialize(d)?.parse().map_err(D::Error::custom)
+    }
+}
 
 /// QueryBuilder struct
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Builder {
-    method: Method,
-    url: String,
-    schema: Option<String>,
+    #[serde(with = "method_serde")]
+    pub method: Method,
+    pub url: String,
+    pub schema: Option<String>,
     // Need this to allow access from `filter.rs`
-    pub(crate) queries: Vec<(String, String)>,
-    headers: HeaderMap,
-    body: Option<String>,
-    is_rpc: bool,
+    pub queries: Vec<(String, String)>,
+    #[serde(with = "headers_serde")]
+    pub headers: HeaderMap,
+    pub body: Option<String>,
+    pub is_rpc: bool,
     // sharing a client is a good idea, performance wise
     // the client has to live at least as much as the builder
-    client: Client,
+    #[serde(skip)]
+    pub client: Client,
 }
 
 // TODO: Test Unicode support
