@@ -60,7 +60,7 @@ pub mod method_serde {
 }
 
 /// QueryBuilder struct
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Builder {
     #[serde(with = "method_serde")]
     pub method: Method,
