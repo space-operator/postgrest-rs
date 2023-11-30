@@ -142,9 +142,8 @@ pub mod method_serde {
     }
 }
 
-/// QueryBuilder struct
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Builder {
+pub struct Query {
     #[serde(with = "method_serde")]
     pub method: Method,
     pub url: String,
@@ -155,14 +154,75 @@ pub struct Builder {
     pub headers: HeaderMap,
     pub body: Option<String>,
     pub is_rpc: bool,
+}
+
+impl From<Builder> for Query {
+    fn from(
+        Builder {
+            method,
+            url,
+            schema,
+            queries,
+            headers,
+            body,
+            is_rpc,
+            ..
+        }: Builder,
+    ) -> Self {
+        Self {
+            method,
+            url,
+            schema,
+            queries,
+            headers,
+            body,
+            is_rpc,
+        }
+    }
+}
+
+/// QueryBuilder struct
+#[derive(Debug, Clone)]
+pub struct Builder {
+    method: Method,
+    url: String,
+    schema: Option<String>,
+    // Need this to allow access from `filter.rs`
+    pub(crate) queries: Vec<(String, String)>,
+    headers: HeaderMap,
+    body: Option<String>,
+    is_rpc: bool,
     // sharing a client is a good idea, performance wise
     // the client has to live at least as much as the builder
-    #[serde(skip)]
     pub client: Client,
 }
 
 // TODO: Test Unicode support
 impl Builder {
+    pub fn from_query(
+        Query {
+            method,
+            url,
+            schema,
+            queries,
+            headers,
+            body,
+            is_rpc,
+        }: Query,
+        client: Client,
+    ) -> Self {
+        Self {
+            method,
+            url,
+            schema,
+            queries,
+            headers,
+            body,
+            is_rpc,
+            client,
+        }
+    }
+
     /// Creates a new `Builder` with the specified `schema`.
     pub fn new<T>(url: T, schema: Option<String>, headers: HeaderMap, client: Client) -> Self
     where
