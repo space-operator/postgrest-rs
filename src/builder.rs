@@ -33,16 +33,99 @@ pub mod headers_serde {
         seq.end()
     }
 
+    pub struct Name(HeaderName);
+
+    pub struct NameVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for NameVisitor {
+        type Value = Name;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("string")
+        }
+
+        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            Ok(Name(HeaderName::from_bytes(v).map_err(E::custom)?))
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            self.visit_bytes(v.as_bytes())
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Name {
+        fn deserialize<D>(d: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            d.deserialize_str(NameVisitor)
+        }
+    }
+
+    pub struct Value(HeaderValue);
+
+    pub struct ValueVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for ValueVisitor {
+        type Value = Value;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("string or bytes")
+        }
+
+        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            Ok(Value(HeaderValue::from_bytes(v).map_err(E::custom)?))
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            Ok(Value(HeaderValue::from_str(v).map_err(E::custom)?))
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Value {
+        fn deserialize<D>(d: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            d.deserialize_any(ValueVisitor)
+        }
+    }
+
+    pub struct Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for Visitor {
+        type Value = HeaderMap;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("[(string, string|bytes)]")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let mut map = HeaderMap::with_capacity(seq.size_hint().unwrap_or(0));
+            while let Some((name, value)) = seq.next_element::<(Name, Value)>()? {
+                map.insert(name.0, value.0);
+            }
+            Ok(map)
+        }
+    }
+
     pub fn deserialize<'de, D: serde::Deserializer<'de>>(d: D) -> Result<HeaderMap, D::Error> {
-        let raw = Vec::<(bytes::Bytes, bytes::Bytes)>::deserialize(d)?;
-        raw.into_iter()
-            .map(|(k, v)| {
-                Ok((
-                    HeaderName::from_bytes(&k).map_err(D::Error::custom)?,
-                    HeaderValue::from_maybe_shared(v).map_err(D::Error::custom)?,
-                ))
-            })
-            .collect()
+        d.deserialize_seq(Visitor)
     }
 }
 
