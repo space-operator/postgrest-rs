@@ -111,6 +111,30 @@ impl Postgrest {
         }
     }
 
+    /// Creates a Postgrest client.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use postgrest::Postgrest;
+    /// use reqwest::Client;
+    ///
+    /// let client = Postgrest::new("http://your.postgrest.endpoint", Client::new());
+    /// ```
+    pub fn new_with_client<T>(url: T, client: Client) -> Self
+    where
+        T: Into<String>,
+    {
+        Postgrest {
+            url: url.into(),
+            schema: None,
+            headers: HeaderMap::new(),
+            client,
+        }
+    }
+
+
+
     /// Switches the schema.
     ///
     /// # Note
