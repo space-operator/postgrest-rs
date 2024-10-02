@@ -54,7 +54,7 @@ Simplified example using a custom header (e.g. for API gateway authentication wi
 ```rust
 use postgrest::Postgrest;
 
-let client = Postgrest::new("https://your.supabase.endpoint/rest/v1/")
+let client = Postgrest::new("https://your.supabase.endpoint/rest/v1")
     .insert_header("apikey", "ExampleAPIKeyValue"); // EXAMPLE ONLY!
 // Don't actually hard code this value, that's really bad. Use environment
 // variables like with the dotenv(https://crates.io/crates/dotenv) crate to inject
@@ -74,12 +74,36 @@ let body = resp
 use postgrest::Postgrest;
 use dotenv;
 
-dotenv::dotenv().ok(); 
+dotenv::dotenv().ok();
+
+let client = Postgrest::new("https://your.supabase.endpoint/rest/v1")
+    .insert_header(
+        "apikey",
+        dotenv::var("SUPABASE_PUBLIC_API_KEY").unwrap())
+let resp = client
+    .from("your_table")
+    .select("*")
+    .execute()
+    .await?;
+let body = resp
+    .text()
+    .await?;
+```
+
+if you have RLS enabled you're required to add an extra header for this libary to  function correctly.
+
+```rust
+use postgrest::Postgrest;
+use dotenv;
+
+dotenv::dotenv().ok();
 
 let client = Postgrest::new("https://your.supabase.endpoint/rest/v1/")
     .insert_header(
         "apikey",
         dotenv::var("SUPABASE_PUBLIC_API_KEY").unwrap())
+    .insert_header("Authorization", format!("Bearer {}", SERVICE_KEY));
+
 let resp = client
     .from("your_table")
     .select("*")

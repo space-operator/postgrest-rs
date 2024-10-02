@@ -182,7 +182,7 @@ impl From<Builder> for Query {
 }
 
 /// QueryBuilder struct
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Builder {
     method: Method,
     url: String,
@@ -228,9 +228,11 @@ impl Builder {
     where
         T: Into<String>,
     {
+        let url = url.into().trim_end_matches('/').to_string();
+
         let mut builder = Builder {
             method: Method::GET,
-            url: url.into(),
+            url,
             schema,
             queries: Vec::new(),
             headers,
