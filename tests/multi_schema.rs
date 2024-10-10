@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate json; // array!, object!, value!
 
-use postgrest::Postgrest;
+use spo_postgrest::Postgrest;
 
 use std::error::Error;
 

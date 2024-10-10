@@ -1,10 +1,10 @@
 [package]
-name = "postgrest"
+name = "spo-postgrest"
 version = "1.6.0"
 authors = ["Bobbie Soedirgo <bobbie@soedirgo.dev>"]
-description = "PostgREST client-side library"
-homepage = "https://github.com/supabase/postgrest-rs"
-repository = "https://github.com/supabase/postgrest-rs"
+description = "PostgREST client-side library (forked)"
+homepage = "https://github.com/space-operator/postgrest-rs"
+repository = "https://github.com/space-operator/postgrest-rs"
 readme = "README.md"
 license = "Apache-2.0 OR MIT"
 keywords = ["postgres", "postgrest", "rest", "api"]
@@ -14,7 +14,6 @@ edition = "2021"
 [dependencies]
 reqwest = { version = "0.12" }
 serde = { version = "1", features = ["derive"] }
-bytes = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 json = "0.12"

@@ -1,4 +1,4 @@
-use postgrest::Postgrest;
+use spo_postgrest::Postgrest;
 
 use std::error::Error;
 
